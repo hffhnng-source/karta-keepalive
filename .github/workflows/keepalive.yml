@@ -40,7 +40,7 @@ jobs:
           fi
 
       - name: Hämta repot
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Håll repot aktivt (tom commit var 45:e dag)
         run: |
