@@ -1,0 +1,55 @@
+# Håller Supabase-projektet vaket genom att anropa ping() varannan dag.
+# Kräver två hemligheter i repot (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       t.ex. https://xxxx.supabase.co   (utan /rest/v1)
+#   SUPABASE_ANON_KEY  den publika nyckeln (anon/publishable)
+#
+# GitHub stänger av schemalagda körningar i publika repon efter 60 dagar utan
+# aktivitet. Därför gör schemat själv en tom commit om den senaste är äldre än 45 dagar.
+name: Håll Supabase vaken
+
+on:
+  schedule:
+    - cron: "17 5 */2 * *"   # kl 05:17 UTC varannan dag
+  workflow_dispatch:          # gör att man kan köra den för hand med "Run workflow"
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Anropa ping() i Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Hemligheterna SUPABASE_URL och SUPABASE_ANON_KEY saknas i repot."; exit 1
+          fi
+          URL="${SUPABASE_URL%/}"
+          code=$(curl -sS -o svar.txt -w "%{http_code}" -X POST "$URL/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          echo "Svar från Supabase: HTTP $code – $(cat svar.txt)"
+          if [ "$code" != "200" ]; then
+            echo "Pingen misslyckades. Har tillagg-ping.sql körts i Supabase? Stämmer URL och nyckel?"
+            exit 1
+          fi
+
+      - name: Hämta repot
+        uses: actions/checkout@v4
+
+      - name: Håll repot aktivt (tom commit var 45:e dag)
+        run: |
+          last=$(git log -1 --format=%ct)
+          age=$(( ( $(date +%s) - last ) / 86400 ))
+          echo "Senaste commit är $age dagar gammal."
+          if [ "$age" -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Håll repot aktivt"
+            git push
+          fi
