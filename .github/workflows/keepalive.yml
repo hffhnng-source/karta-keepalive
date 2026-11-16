@@ -1,4 +1,4 @@
-# Håller Supabase-projektet vaket genom att anropa ping() varannan dag.
+# Håller Supabase-projektet vaket genom att anropa ping() tre gånger om dagen.
 # Kräver två hemligheter i repot (Settings → Secrets and variables → Actions):
 #   SUPABASE_URL       t.ex. https://xxxx.supabase.co   (utan /rest/v1)
 #   SUPABASE_ANON_KEY  den publika nyckeln (anon/publishable)
@@ -9,7 +9,7 @@ name: Håll Supabase vaken
 
 on:
   schedule:
-    - cron: "17 5 */2 * *"   # kl 05:17 UTC varannan dag
+    - cron: "17 5,13,21 * * *"   # kl 05:17, 13:17 och 21:17 UTC varje dag
   workflow_dispatch:          # gör att man kan köra den för hand med "Run workflow"
 
 permissions:
